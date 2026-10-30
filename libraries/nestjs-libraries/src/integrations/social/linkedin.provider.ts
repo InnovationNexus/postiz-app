@@ -1,4 +1,8 @@
 import {
+  LINKEDIN_PERSONAL_SCOPES,
+  linkedinAuthUrl,
+} from '@gitroom/nestjs-libraries/integrations/social/linkedin.innexus';
+import {
   AuthTokenDetails,
   PendingCheckResponse,
   PostDetails,
@@ -63,15 +67,8 @@ export class LinkedinProvider extends SocialAbstract implements SocialProvider {
   oneTimeToken = true;
 
   isBetweenSteps = false;
-  scopes = [
-    'openid',
-    'profile',
-    'w_member_social',
-    'r_basicprofile',
-    'rw_organization_admin',
-    'w_organization_social',
-    'r_organization_social',
-  ];
+  // InnovationNexus: no organization scopes on the personal app (#1582)
+  scopes = [...LINKEDIN_PERSONAL_SCOPES];
   override maxConcurrentJob = 8; // LinkedIn limits are daily budgets
   refreshWait = true;
   editor = 'normal' as const;
@@ -182,11 +179,12 @@ export class LinkedinProvider extends SocialAbstract implements SocialProvider {
   async generateAuthUrl() {
     const state = makeSecureId(6);
     const codeVerifier = makeSecureId(30);
-    const url = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${
-      process.env.LINKEDIN_CLIENT_ID
-    }&prompt=none&redirect_uri=${encodeURIComponent(
-      `${process.env.FRONTEND_URL}/integrations/social/linkedin`
-    )}&state=${state}&scope=${encodeURIComponent(this.scopes.join(' '))}`;
+    const url = linkedinAuthUrl({
+      clientId: process.env.LINKEDIN_CLIENT_ID || '',
+      redirectUri: `${process.env.FRONTEND_URL}/integrations/social/linkedin`,
+      state,
+      scopes: this.scopes,
+    });
     return {
       url,
       codeVerifier,
