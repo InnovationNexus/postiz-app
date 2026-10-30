@@ -7,6 +7,12 @@ import {
 } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
 import { makeSecureId } from '@gitroom/nestjs-libraries/services/make.secure.id';
 import { LinkedinProvider } from '@gitroom/nestjs-libraries/integrations/social/linkedin.provider';
+import {
+  LINKEDIN_PAGE_SCOPES,
+  linkedinAuthUrl,
+  linkedinDisplayName,
+  linkedinPageCredentials,
+} from '@gitroom/nestjs-libraries/integrations/social/linkedin.innexus';
 import dayjs from 'dayjs';
 import { Integration } from '@prisma/client';
 import { Plug } from '@gitroom/helpers/decorators/plug.decorator';
@@ -26,15 +32,8 @@ export class LinkedinPageProvider
   override isBetweenSteps = true;
   override refreshWait = true;
   override maxConcurrentJob = 2; // LinkedIn Page has professional posting limits
-  override scopes = [
-    'openid',
-    'profile',
-    'w_member_social',
-    'r_basicprofile',
-    'rw_organization_admin',
-    'w_organization_social',
-    'r_organization_social',
-  ];
+  // InnovationNexus: no 'profile' (not grantable on a Community Management app)
+  override scopes = [...LINKEDIN_PAGE_SCOPES];
 
   override editor = 'normal' as const;
 
@@ -54,13 +53,13 @@ export class LinkedinPageProvider
         body: new URLSearchParams({
           grant_type: 'refresh_token',
           refresh_token,
-          client_id: process.env.LINKEDIN_CLIENT_ID!,
-          client_secret: process.env.LINKEDIN_CLIENT_SECRET!,
+          client_id: linkedinPageCredentials(process.env).clientId,
+          client_secret: linkedinPageCredentials(process.env).clientSecret,
         }),
       })
     ).json();
 
-    const { vanityName } = await (
+    const { vanityName, localizedFirstName, localizedLastName } = await (
       await fetch('https://api.linkedin.com/v2/me', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -85,7 +84,7 @@ export class LinkedinPageProvider
       accessToken,
       refreshToken,
       expiresIn: expires_in,
-      name,
+      name: linkedinDisplayName({ name }, { localizedFirstName, localizedLastName }),
       picture,
       username: vanityName,
     };
@@ -124,11 +123,12 @@ export class LinkedinPageProvider
   override async generateAuthUrl() {
     const state = makeSecureId(6);
     const codeVerifier = makeSecureId(30);
-    const url = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&prompt=none&client_id=${
-      process.env.LINKEDIN_CLIENT_ID
-    }&redirect_uri=${encodeURIComponent(
-      `${process.env.FRONTEND_URL}/integrations/social/linkedin-page`
-    )}&state=${state}&scope=${encodeURIComponent(this.scopes.join(' '))}`;
+    const url = linkedinAuthUrl({
+      clientId: linkedinPageCredentials(process.env).clientId,
+      redirectUri: `${process.env.FRONTEND_URL}/integrations/social/linkedin-page`,
+      state,
+      scopes: this.scopes,
+    });
     return {
       url,
       codeVerifier,
@@ -221,8 +221,9 @@ export class LinkedinPageProvider
       'redirect_uri',
       `${process.env.FRONTEND_URL}/integrations/social/linkedin-page`
     );
-    body.append('client_id', process.env.LINKEDIN_CLIENT_ID!);
-    body.append('client_secret', process.env.LINKEDIN_CLIENT_SECRET!);
+    const creds = linkedinPageCredentials(process.env);
+    body.append('client_id', creds.clientId);
+    body.append('client_secret', creds.clientSecret);
 
     const {
       access_token: accessToken,
@@ -253,7 +254,7 @@ export class LinkedinPageProvider
       })
     ).json();
 
-    const { vanityName } = await (
+    const { vanityName, localizedFirstName, localizedLastName } = await (
       await fetch('https://api.linkedin.com/v2/me', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -268,7 +269,7 @@ export class LinkedinPageProvider
       accessToken,
       refreshToken,
       expiresIn,
-      name,
+      name: linkedinDisplayName({ name }, { localizedFirstName, localizedLastName }),
       picture,
       username: vanityName,
     };
