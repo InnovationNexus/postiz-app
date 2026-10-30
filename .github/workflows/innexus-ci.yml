@@ -35,10 +35,14 @@ jobs:
       - name: Run fork patch tests
         timeout-minutes: 5
         # The spec file is import-free apart from vitest, so run vitest standalone
-        # from a throwaway prefix instead of installing the whole pnpm workspace.
+        # instead of installing the whole workspace. npm on this Node build crashes
+        # installing vitest ("reading 'edgesOut'"), so use pnpm, the repo's own
+        # package manager, from the runner temp dir (outside the workspace).
+        working-directory: ${{ runner.temp }}
         run: |
-          npm install --prefix "$RUNNER_TEMP/vt" --no-save --no-package-lock --no-fund --no-audit vitest@4.1.12
-          "$RUNNER_TEMP/vt/node_modules/.bin/vitest" run --root "$GITHUB_WORKSPACE" \
+          corepack enable
+          corepack prepare pnpm@10.6.1 --activate
+          pnpm dlx vitest@4.1.12 run --root "$GITHUB_WORKSPACE" \
             --dir libraries/nestjs-libraries/src/integrations/social \
             linkedin.innexus.spec.ts
 
