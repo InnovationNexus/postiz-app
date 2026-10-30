@@ -34,9 +34,11 @@ jobs:
           node-version-file: .nvmrc
       - name: Run fork patch tests
         timeout-minutes: 5
+        # The spec file is import-free apart from vitest, so run vitest standalone
+        # from a throwaway prefix instead of installing the whole pnpm workspace.
         run: |
-          mkdir -p /tmp/vt && cd /tmp/vt && npm init -y >/dev/null && npm i --no-fund --no-audit vitest@4.1.12 >/dev/null
-          /tmp/vt/node_modules/.bin/vitest run --root "$GITHUB_WORKSPACE" \
+          npm install --prefix "$RUNNER_TEMP/vt" --no-save --no-package-lock --no-fund --no-audit vitest@4.1.12
+          "$RUNNER_TEMP/vt/node_modules/.bin/vitest" run --root "$GITHUB_WORKSPACE" \
             --dir libraries/nestjs-libraries/src/integrations/social \
             linkedin.innexus.spec.ts
 
