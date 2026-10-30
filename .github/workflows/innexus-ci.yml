@@ -43,7 +43,7 @@ jobs:
           corepack enable
           corepack prepare pnpm@10.6.1 --activate
           pnpm dlx vitest@4.1.12 run --root "$GITHUB_WORKSPACE" \
-            --dir libraries/nestjs-libraries/src/integrations/social \
+            --dir "$GITHUB_WORKSPACE/libraries/nestjs-libraries/src/integrations/social" \
             linkedin.innexus.spec.ts
 
   build-image:
