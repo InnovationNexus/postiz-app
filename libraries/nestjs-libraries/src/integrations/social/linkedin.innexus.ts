@@ -19,12 +19,12 @@ export const LINKEDIN_PERSONAL_SCOPES = [
   'w_member_social',
 ];
 
-// Page channel: what the Community Management app can grant. 'profile' is
-// dropped because it is not grantable on a Community Management app (probe
-// 2026-10-28: unauthorized_scope_error); 'openid' is a baseline scope that is
-// granted anyway and keeps /v2/userinfo returning the member `sub`.
+// Page channel: what the Community Management app can grant. No 'profile'
+// (not grantable on a Community Management app, probe 2026-10-28) and no
+// 'openid': LinkedIn refuses openid unless profile or email is also requested
+// ("Include valid openId scopes like profile, email.", probe 2026-11-02).
+// Identity therefore comes from /v2/me (r_basicprofile), not /v2/userinfo.
 export const LINKEDIN_PAGE_SCOPES = [
-  'openid',
   'w_member_social',
   'r_basicprofile',
   'rw_organization_admin',
@@ -96,4 +96,19 @@ export function linkedinAuthUrl(params: {
     `&state=${params.state}` +
     `&scope=${encodeURIComponent(params.scopes.join(' '))}`
   );
+}
+
+// /v2/me (r_basicprofile) -> the member identity the page provider needs
+// before the page picker replaces it with the organization.
+export function linkedinMemberFromMe(me: {
+  id?: string;
+  localizedFirstName?: string;
+  localizedLastName?: string;
+  vanityName?: string;
+} | undefined): { id: string; name: string; username: string } {
+  return {
+    id: me?.id || '',
+    name: linkedinDisplayName(undefined, me),
+    username: me?.vanityName || '',
+  };
 }

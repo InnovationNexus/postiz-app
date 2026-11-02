@@ -10,7 +10,7 @@ import { LinkedinProvider } from '@gitroom/nestjs-libraries/integrations/social/
 import {
   LINKEDIN_PAGE_SCOPES,
   linkedinAuthUrl,
-  linkedinDisplayName,
+  linkedinMemberFromMe,
   linkedinPageCredentials,
 } from '@gitroom/nestjs-libraries/integrations/social/linkedin.innexus';
 import dayjs from 'dayjs';
@@ -59,7 +59,7 @@ export class LinkedinPageProvider
       })
     ).json();
 
-    const { vanityName, localizedFirstName, localizedLastName } = await (
+    const me = await (
       await fetch('https://api.linkedin.com/v2/me', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -67,26 +67,15 @@ export class LinkedinPageProvider
       })
     ).json();
 
-    const {
-      name,
-      sub: id,
-      picture,
-    } = await (
-      await fetch('https://api.linkedin.com/v2/userinfo', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      })
-    ).json();
 
     return {
-      id,
+      id: linkedinMemberFromMe(me).id,
       accessToken,
       refreshToken,
       expiresIn: expires_in,
-      name: linkedinDisplayName({ name }, { localizedFirstName, localizedLastName }),
-      picture,
-      username: vanityName,
+      name: linkedinMemberFromMe(me).name,
+      picture: '',
+      username: linkedinMemberFromMe(me).username,
     };
   }
 
@@ -242,19 +231,8 @@ export class LinkedinPageProvider
 
     this.checkScopes(this.scopes, scope);
 
-    const {
-      name,
-      sub: id,
-      picture,
-    } = await (
-      await fetch('https://api.linkedin.com/v2/userinfo', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      })
-    ).json();
 
-    const { vanityName, localizedFirstName, localizedLastName } = await (
+    const me = await (
       await fetch('https://api.linkedin.com/v2/me', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -265,13 +243,13 @@ export class LinkedinPageProvider
     return {
       // namespaced placeholder so the in-between row never collides with the
       // personal LinkedIn channel row (same org + same member sub)
-      id: `${this.identifier}_${id}`,
+      id: `${this.identifier}_${linkedinMemberFromMe(me).id}`,
       accessToken,
       refreshToken,
       expiresIn,
-      name: linkedinDisplayName({ name }, { localizedFirstName, localizedLastName }),
-      picture,
-      username: vanityName,
+      name: linkedinMemberFromMe(me).name,
+      picture: '',
+      username: linkedinMemberFromMe(me).username,
     };
   }
 
