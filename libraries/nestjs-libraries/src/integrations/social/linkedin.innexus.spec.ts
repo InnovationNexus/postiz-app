@@ -4,6 +4,7 @@ import {
   LINKEDIN_PERSONAL_SCOPES,
   linkedinAuthUrl,
   linkedinDisplayName,
+  linkedinMemberFromMe,
   linkedinPageCredentials,
   linkedinPersonalCredentials,
 } from './linkedin.innexus';
@@ -32,7 +33,11 @@ describe('scopes', () => {
       expect(LINKEDIN_PAGE_SCOPES).toContain(s);
     }
     expect(LINKEDIN_PAGE_SCOPES).not.toContain('profile');
-    expect(LINKEDIN_PAGE_SCOPES).toContain('openid');
+  });
+
+  it('page channel never asks for openid (LinkedIn rejects openid without profile/email)', () => {
+    expect(LINKEDIN_PAGE_SCOPES).not.toContain('openid');
+    expect(LINKEDIN_PAGE_SCOPES).not.toContain('email');
   });
 });
 
@@ -136,5 +141,23 @@ describe('auth url', () => {
     expect(q.get('state')).toBe('abc123');
     expect(q.get('scope')).toBe(LINKEDIN_PAGE_SCOPES.join(' '));
     expect(q.get('response_type')).toBe('code');
+  });
+});
+
+describe('member from /v2/me', () => {
+  it('maps id, name and vanity name', () => {
+    expect(
+      linkedinMemberFromMe({
+        id: 'abc123',
+        localizedFirstName: 'Jay',
+        localizedLastName: 'Jordan',
+        vanityName: 'jayjordan',
+      })
+    ).toEqual({ id: 'abc123', name: 'Jay Jordan', username: 'jayjordan' });
+  });
+
+  it('tolerates an empty or failed response', () => {
+    expect(linkedinMemberFromMe(undefined)).toEqual({ id: '', name: '', username: '' });
+    expect(linkedinMemberFromMe({})).toEqual({ id: '', name: '', username: '' });
   });
 });
